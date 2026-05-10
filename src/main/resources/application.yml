@@ -1,0 +1,12 @@
+server:
+  port: 8080
+
+app:
+  jwt:
+    secret: ${JWT_SECRET:smartlogix-secret-local-cambiarlo-en-prod}
+    expiration-ms: 3600000   # 1 hora
+  microservices:
+    orders:   ${MS_ORDERS_URL:http://localhost:8082}
+    inventory: ${MS_INVENTORY_URL:http://localhost:8081}
+  cors:
+    allowed-origin: ${CORS_ORIGIN:http://localhost:5173}
