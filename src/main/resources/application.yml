@@ -8,5 +8,6 @@ app:
   microservices:
     orders:   ${MS_ORDERS_URL:http://localhost:8082}
     inventory: ${MS_INVENTORY_URL:http://localhost:8081}
+    users:     ${MS_USERS_URL:http://localhost:8083}
   cors:
     allowed-origin: ${CORS_ORIGIN:http://localhost:5173}
