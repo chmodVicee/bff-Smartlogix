@@ -3,10 +3,11 @@ server:
 
 app:
   jwt:
-    secret: ${JWT_SECRET:smartlogix-secret-local-cambiarlo-en-prod}
+    secret: 841D8A6C80CBA4FAA6E14BF7F2A21430F87208FCA46D2967F550269BE6B19B00FBE8B51E2833FDE4384D6F39F931D3156291C7C9E7D8A7490A5BE0A272A5EE
     expiration-ms: 3600000   # 1 hora
   microservices:
-    orders:   ${MS_ORDERS_URL:http://localhost:8082}
-    inventory: ${MS_INVENTORY_URL:http://localhost:8081}
+    orders: ${MS_ORDERS_URL:http://localhost:8081/api/orders}
+    inventory: ${MS_INVENTORY_URL:http://localhost:8082}
+    users: ${MS_USER_URL:http://localhost:8083}
   cors:
     allowed-origin: ${CORS_ORIGIN:http://localhost:5173}

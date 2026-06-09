@@ -9,11 +9,7 @@ import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestTemplate;
 
 /**
- * Proxy hacia el Microservicio de Orders (puerto 8082).
- *
- * Rutas expuestas por el BFF → ruta real en el MS:
- *   POST /api/orders/place-order  →  POST http://localhost:8082/place-order
- *   GET  /api/orders/all          →  GET  http://localhost:8082/all
+ * Proxy hacia el Microservicio de Orders (puerto 8081).
  */
 @RestController
 @RequestMapping("/api/orders")
@@ -21,30 +17,32 @@ import org.springframework.web.client.RestTemplate;
 public class OrderController {
 
     @Value("${app.microservices.orders}")
-    private String ordersUrl;   // http://localhost:8082
+    private String ordersUrl;   // Leerá http://localhost:8081/api/orders desde el yml
 
     private final RestTemplate restTemplate = new RestTemplate();
 
-    // POST /api/orders/place-order
     @PostMapping("/place-order")
-    public ResponseEntity<String> createOrder(@RequestBody String body) {
-        return forward(HttpMethod.POST, "/place-order", body);
+    public ResponseEntity<String> createOrder(@RequestBody String body,
+                                              @RequestHeader(value = "Authorization", required = false) String token) {
+        return forwardWithAuth(HttpMethod.POST, "/place-order", body, token);
     }
 
-    // GET /api/orders/all
     @GetMapping("/all")
-    public ResponseEntity<String> getAllOrders() {
-        return forward(HttpMethod.GET, "/all", null);
+    public ResponseEntity<String> getAllOrders(@RequestHeader(value = "Authorization", required = false) String token) {
+        return forwardWithAuth(HttpMethod.GET, "/all", null, token);
     }
 
-    // ── reenvío interno ────────────────────────────────────────────────────
 
-    private ResponseEntity<String> forward(HttpMethod method, String path, String body) {
+    private ResponseEntity<String> forwardWithAuth(HttpMethod method, String path, String body, String token) {
         String url = ordersUrl + path;
-        log.info("Orders proxy: {} {}", method, url);
+        log.info("Orders proxy (auth): {} {}", method, url);
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
+
+        if (token != null) {
+            headers.set("Authorization", token);
+        }
 
         try {
             return restTemplate.exchange(url, method, new HttpEntity<>(body, headers), String.class);

@@ -10,14 +10,6 @@ import org.springframework.web.client.RestTemplate;
 
 /**
  * Proxy hacia el Microservicio de Inventory (puerto 8081).
- *
- * Rutas expuestas por el BFF → ruta real en el MS:
- *   GET  /api/inventory/all                              →  GET  http://localhost:8081/all
- *   GET  /api/inventory/{productoCodigo}/{almacenCodigo} →  GET  http://localhost:8081/{productoCodigo}/{almacenCodigo}
- *   GET  /api/inventory/total/{productoCodigo}           →  GET  http://localhost:8081/total/{productoCodigo}
- *   POST /api/inventory/add                              →  POST http://localhost:8081/add
- *   POST /api/inventory/bulk-add                         →  POST http://localhost:8081/bulk-add
- *   POST /api/inventory/update                           →  POST http://localhost:8081/update
  */
 @RestController
 @RequestMapping("/api/inventory")
@@ -29,51 +21,53 @@ public class InventoryController {
 
     private final RestTemplate restTemplate = new RestTemplate();
 
-    // GET /api/inventory/all
     @GetMapping("/all")
-    public ResponseEntity<String> getAllStock() {
-        return forward(HttpMethod.GET, "/all", null);
+    public ResponseEntity<String> getAllStock(@RequestHeader(value = "Authorization", required = false) String token) {
+        return forwardWithAuth(HttpMethod.GET, "/all", null, token);
     }
 
-    // GET /api/inventory/{productoCodigo}/{almacenCodigo}
     @GetMapping("/{productoCodigo}/{almacenCodigo}")
     public ResponseEntity<String> getStock(@PathVariable String productoCodigo,
-                                           @PathVariable String almacenCodigo) {
-        return forward(HttpMethod.GET, "/" + productoCodigo + "/" + almacenCodigo, null);
+                                           @PathVariable String almacenCodigo,
+                                           @RequestHeader(value = "Authorization", required = false) String token) {
+        return forwardWithAuth(HttpMethod.GET, "/" + productoCodigo + "/" + almacenCodigo, null, token);
     }
 
-    // GET /api/inventory/total/{productoCodigo}
     @GetMapping("/total/{productoCodigo}")
-    public ResponseEntity<String> getTotalStock(@PathVariable String productoCodigo) {
-        return forward(HttpMethod.GET, "/total/" + productoCodigo, null);
+    public ResponseEntity<String> getTotalStock(@PathVariable String productoCodigo,
+                                                @RequestHeader(value = "Authorization", required = false) String token) {
+        return forwardWithAuth(HttpMethod.GET, "/total/" + productoCodigo, null, token);
     }
 
-    // POST /api/inventory/add
     @PostMapping("/add")
-    public ResponseEntity<String> addProduct(@RequestBody String body) {
-        return forward(HttpMethod.POST, "/add", body);
+    public ResponseEntity<String> addProduct(@RequestBody String body,
+                                             @RequestHeader(value = "Authorization", required = false) String token) {
+        return forwardWithAuth(HttpMethod.POST, "/add", body, token);
     }
 
-    // POST /api/inventory/bulk-add
     @PostMapping("/bulk-add")
-    public ResponseEntity<String> addProducts(@RequestBody String body) {
-        return forward(HttpMethod.POST, "/bulk-add", body);
+    public ResponseEntity<String> addProducts(@RequestBody String body,
+                                              @RequestHeader(value = "Authorization", required = false) String token) {
+        return forwardWithAuth(HttpMethod.POST, "/bulk-add", body, token);
     }
 
-    // POST /api/inventory/update
     @PostMapping("/update")
-    public ResponseEntity<String> updateStock(@RequestBody String body) {
-        return forward(HttpMethod.POST, "/update", body);
+    public ResponseEntity<String> updateStock(@RequestBody String body,
+                                              @RequestHeader(value = "Authorization", required = false) String token) {
+        return forwardWithAuth(HttpMethod.POST, "/update", body, token);
     }
 
-    // ── reenvío interno ────────────────────────────────────────────────────
 
-    private ResponseEntity<String> forward(HttpMethod method, String path, String body) {
-        String url = inventoryUrl + path;
-        log.info("Inventory proxy: {} {}", method, url);
+    private ResponseEntity<String> forwardWithAuth(HttpMethod method, String path, String body, String token) {
+        String url = inventoryUrl + "/api/inventory" + path;
+        log.info("Inventory proxy (auth): {} {}", method, url);
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
+
+        if (token != null) {
+            headers.set("Authorization", token);
+        }
 
         try {
             return restTemplate.exchange(url, method, new HttpEntity<>(body, headers), String.class);
