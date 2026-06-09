@@ -1,6 +1,7 @@
 package com.SmartLogix.security;
 
 import io.jsonwebtoken.*;
+import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -20,7 +21,8 @@ public class JwtService {
     private long expirationMs;
 
     private Key key() {
-        return Keys.hmacShaKeyFor(secret.getBytes());
+        byte[] keyBytes = secret.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        return Keys.hmacShaKeyFor(keyBytes);
     }
 
     public String generate(String username) {
@@ -28,7 +30,7 @@ public class JwtService {
                 .setSubject(username)
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + expirationMs))
-                .signWith(key(), SignatureAlgorithm.HS256)
+                .signWith(key())
                 .compact();
     }
 
