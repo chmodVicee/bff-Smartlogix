@@ -29,6 +29,7 @@ public class UserController {
 
     @PostMapping("/auth/register")
     public ResponseEntity<String> register(@RequestBody String body) {
+        log.info("BFF recibiendo registro. Body: {}", body);
         return forward(HttpMethod.POST, "/api/auth/register", body);
     }
 
