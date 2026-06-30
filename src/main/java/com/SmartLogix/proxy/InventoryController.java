@@ -57,6 +57,13 @@ public class InventoryController {
         return forwardWithAuth(HttpMethod.POST, "/update", body, token);
     }
 
+    @PutMapping("/{id}")
+    public ResponseEntity<String> updateById(@PathVariable Long id,
+                                             @RequestBody String body,
+                                             @RequestHeader(value = "Authorization", required = false) String token) {
+        return forwardWithAuth(HttpMethod.PUT, "/" + id, body, token);
+    }
+
 
     private ResponseEntity<String> forwardWithAuth(HttpMethod method, String path, String body, String token) {
         String url = inventoryUrl + "/api/inventory" + path;
