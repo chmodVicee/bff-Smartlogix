@@ -1,76 +1,143 @@
-# SmartLogix - Backend For Frontend (BFF) & API Gateway
+# BFF (Backend For Frontend) — SmartLogix
 
-**SmartLogix** es una Plataforma Inteligente para la Gestión Logística de eCommerce diseñada para empoderar a las PYMEs, permitiéndoles gestionar sus operaciones logísticas con mayor eficiencia y reducir costos operativos. 
+Capa de API Gateway que actúa como punto de entrada único para el frontend. Centraliza la autenticación JWT, enruta las peticiones hacia los microservicios internos y protege la topología de la red interna.
 
-La solución está construida bajo una arquitectura de **microservicios altamente escalable** y desacoplada, dividida en un frontend moderno y flexible, y un backend seguro. Este repositorio corresponde a la capa **BFF (Backend For Frontend)**, que actúa de manera unificada como el **API Gateway** y el orquestador de seguridad de la plataforma.
+## Datos técnicos
+
+| Campo | Valor |
+|---|---|
+| Puerto | `8080` |
+| Autenticación | JWT propio (sin base de datos, usuarios hardcodeados) |
+| Microservicio Inventory | `http://localhost:8082` |
+| Microservicio Orders | `http://localhost:8081` |
+
+## Usuarios disponibles
+
+| Usuario | Contraseña |
+|---|---|
+| `admin` | `admin123` |
+| `gestor` | `gestor123` |
+
+## Endpoints
+
+### Autenticación (público)
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| POST | `/api/auth/login` | Obtener token JWT |
+
+### Proxy Inventory (requieren JWT)
+
+| Método | Ruta BFF | Redirige a Inventory MS |
+|---|---|---|
+| GET | `/api/inventory/all` | `GET /api/inventory/all` |
+| GET | `/api/inventory/{productoCodigo}/{almacenCodigo}` | `GET /api/inventory/{productoCodigo}/{almacenCodigo}` |
+| POST | `/api/inventory/add` | `POST /api/inventory/add` |
+| POST | `/api/inventory/bulk-add` | `POST /api/inventory/bulk-add` |
+| POST | `/api/inventory/update` | `POST /api/inventory/update` |
+
+### Proxy Orders (requieren JWT)
+
+| Método | Ruta BFF | Redirige a Orders MS |
+|---|---|---|
+| POST | `/api/orders/place-order` | `POST /api/orders/place-order` |
+| GET | `/api/orders/all` | `GET /api/orders/all` |
 
 ---
 
-## Arquitectura y Rol del BFF
+## Pruebas en Postman
 
-Dentro del ecosistema de SmartLogix, que contempla 3 módulos principales (Gestión de Inventario, Procesamiento de Pedidos y Coordinación de Envíos), el **BFF** desempeña un rol crítico:
+### 1. Login (obtener token)
 
-1. **Punto de Entrada Único (API Gateway)**: Gestiona y enruta todas las peticiones desde la capa de Frontend hacia los distintos microservicios subyacentes (Inventory MS en el puerto `8081` y Orders MS en el puerto `8082`).
-2. **Separación de Responsabilidades**: Evita que el cliente (Frontend) tenga que conocer la topología de la red interna o interactuar directamente con múltiples microservicios.
-3. **Capa de Seguridad Centralizada**: Maneja la autenticación y la validación de tokens JWT (`JwtFilter`), garantizando que ninguna petición no autorizada llegue a la capa de dominio de los microservicios.
-4. **Resiliencia y Enrutamiento**: Facilita la implementación de patrones como *Circuit Breaker* (manejando fallos en la comunicación con los microservicios mediante `RestTemplate` y capturando excepciones HTTP).
+```
+POST http://localhost:8080/api/auth/login
+Content-Type: application/json
 
-## Patrones de Diseño y Tecnologías
+{
+  "username": "admin",
+  "password": "admin123"
+}
+```
 
-El proyecto se alinea con prácticas modernas de desarrollo de software y adopta patrones arquitectónicos clave:
+**Respuesta esperada (200):**
+```json
+{
+  "accessToken": "eyJhbGciOiJIUzI1NiJ9...",
+  "username": "admin"
+}
+```
 
-- **API Gateway / BFF Pattern**: Orquestación y proxying de peticiones.
-- **Repository Pattern & Factory Method**: Aplicados en los microservicios internos para la persistencia y creación de instancias.
-- **Resiliencia (Circuit Breaker)**: Manejo de errores controlados cuando un microservicio de backend no está disponible (`503 Service Unavailable`).
-- **Tecnologías Core**: 
-  - Java 21
-  - Spring Boot (Web, Security)
-  - JSON Web Tokens (JWT) para autenticación sin estado (Stateless).
+> Copia el `accessToken`. Se usa como `Bearer Token` en todas las peticiones siguientes.
 
 ---
 
-## Comprobar el funcionamiento del backend + base de datos
+### 2. Listar inventario (via BFF)
 
-Para levantar el BFF localmente y probar la interconexión con los microservicios (asegúrate de que los microservicios de Inventory y Orders también estén en ejecución si deseas el flujo completo):
+```
+GET http://localhost:8080/api/inventory/all
+Authorization: Bearer <token>
+```
 
-### 1. Ejecutar la aplicación
-Desde tu IDE de preferencia o mediante la terminal en la raíz del proyecto:
+---
+
+### 3. Agregar producto al inventario (via BFF)
+
+```
+POST http://localhost:8080/api/inventory/add
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "productoCodigo": "PROD-001",
+  "almacenCodigo": "ALM-A",
+  "stock": 100
+}
+```
+
+---
+
+### 4. Crear pedido (via BFF)
+
+```
+POST http://localhost:8080/api/orders/place-order
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "numeroPedido": "PED-ABC123",
+  "productoCodigo": "PROD-001",
+  "almacenCodigo": "ALM-A",
+  "cantidad": 3
+}
+```
+
+---
+
+### 5. Listar pedidos (via BFF)
+
+```
+GET http://localhost:8080/api/orders/all
+Authorization: Bearer <token>
+```
+
+---
+
+### Comportamiento ante fallos
+
+Si un microservicio no está disponible, el BFF retorna:
+
+```json
+{ "error": "Servicio de inventario no disponible" }
+```
+
+con código `503 Service Unavailable`, sin exponer detalles internos al frontend.
+
+---
+
+## Cómo levantar
 
 ```bash
 ./mvnw spring-boot:run
 ```
-El BFF se levantará por defecto en el puerto `8080`.
 
-### 2. Pruebas de integración vía Postman
-
-Dado que el BFF está asegurado con JWT, deberás obtener un token primero (o deshabilitar la seguridad para pruebas locales en `SecurityConfig`). Suponiendo un flujo estándar de inventario:
-
-**A. Autenticación (Obtener Token)**
-- **POST:** `http://localhost:8080/api/auth/login`
-- **Body (JSON):**
-  ```json
-  {
-      "username": "admin",
-      "password": "admin123"
-  }
-  ```
-- *Copia el `accessToken` devuelto para usarlo como Bearer Token en las siguientes peticiones.*
-
-**B. Agregar producto al inventario**
-- **POST:** `http://localhost:8080/api/inventory/add`
-- **Headers:** `Authorization: Bearer <tu_token_aqui>`
-- **Body (JSON):**
-  ```json
-  {
-      "productoCodigo":"",
-      "almacenCodigo":"",
-      "stock":{number}
-  }
-  ```
-Una vez que el BFF rutee la petición al Microservicio de Inventario y este responda con un `201 Created`, puedes proceder a verificarlo.
-
-**C. Consultar el inventario total**
-- **GET:** `http://localhost:8080/api/inventory/all`
-- **Headers:** `Authorization: Bearer <tu_token_aqui>`
-
-Este método `GET` devolverá un arreglo con todos los registros de inventario (y sus respectivos niveles de stock multisucursal) consolidados en la base de datos a través del microservicio de Inventario.
+No requiere base de datos. Los microservicios de Inventory (`8082`) y Orders (`8081`) deben estar corriendo para que el proxy funcione.
